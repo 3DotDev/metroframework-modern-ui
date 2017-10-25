@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.ComponentModel;
 using System.Windows.Forms;
@@ -17,7 +17,7 @@ namespace MetroFramework.Controls
     public partial class MetroListView : ListView, IMetroControl
     {
         private ListViewColumnSorter lvwColumnSorter;
-        private Font stdFont = new Font("Segoe UI", 11f, FontStyle.Regular, GraphicsUnit.Pixel);
+        private Font stdFont = new Font("Segoe UI", 13f, FontStyle.Regular, GraphicsUnit.Pixel);
         float _offset = 0.2F;
 
         #region Interface
@@ -438,7 +438,7 @@ namespace MetroFramework.Controls
 
         public MetroListView()
         {
-            this.Font = new Font("Segoe UI", 12.0f);
+            this.Font = new Font("Segoe UI", 18.0f);
             this.HideSelection = true;
 
             this.OwnerDraw = true;
@@ -448,6 +448,8 @@ namespace MetroFramework.Controls
             this.Resize += MetroListView_Resize;
             this.ColumnClick += MetroListView_ColumnClick;
             this.SelectedIndexChanged += MetroListView_SelectedIndexChanged;
+            this.MouseMove += MetroListView_MouseMove;
+            this.Invalidated += MetroListView_Invalidated;
             this.FullRowSelect = true;
             this.Controls.Add(_vScrollbar);
             _vScrollbar.Visible = false;
@@ -539,11 +541,13 @@ namespace MetroFramework.Controls
             Color itemForeColor = MetroPaint.ForeColor.Button.Disabled(Theme);
             if (this.View == View.Details)
             {
-             
+                //Color fillColor = MetroPaint.GetStyleColor(Style);
+
                 if (e.Item.Selected)
                 {
                     e.Graphics.FillRectangle(new SolidBrush(ControlPaint.Light(MetroPaint.GetStyleColor(Style), _offset)), e.Bounds);
                     itemForeColor = Color.White;
+                    //fillColor = Color.White;
                 }
 
                 TextFormatFlags align = TextFormatFlags.Left;
@@ -595,21 +599,21 @@ namespace MetroFramework.Controls
 
                 using (StringFormat sf = new StringFormat())
                 {
-                    TextFormatFlags flags = TextFormatFlags.Left;
+                    //TextFormatFlags flags = TextFormatFlags.Left;
 
                     switch (e.Header.TextAlign)
                     {
                         case HorizontalAlignment.Center:
                             sf.Alignment = StringAlignment.Center;
-                            flags = TextFormatFlags.HorizontalCenter;
+                            //flags = TextFormatFlags.HorizontalCenter;
                             break;
                         case HorizontalAlignment.Right:
                             sf.Alignment = StringAlignment.Far;
-                            flags = TextFormatFlags.Right;
+                            //flags = TextFormatFlags.Right;
                             break;
                         default:
                             sf.Alignment = StringAlignment.Near;
-                            flags = TextFormatFlags.Left;
+                            //flags = TextFormatFlags.Left;
                             break;
                     }
 
@@ -617,13 +621,14 @@ namespace MetroFramework.Controls
                     if (e.ColumnIndex > 0 && Double.TryParse(e.SubItem.Text, NumberStyles.Currency, NumberFormatInfo.CurrentInfo, out subItemValue))
                     {
                         sf.Alignment = StringAlignment.Far;
-                        flags = TextFormatFlags.Right;
+                        //flags = TextFormatFlags.Right;
                     }
 
 
                     //TextFormatFlags align = TextFormatFlags.Left;
                     Rectangle rect = new Rectangle(e.Bounds.X + _left, e.Bounds.Y, _colWidth - _ded, e.Item.Bounds.Height);
                     TextRenderer.DrawText(e.Graphics, e.SubItem.Text, stdFont, rect, itemForeColor, align | TextFormatFlags.SingleLine | TextFormatFlags.GlyphOverhangPadding | TextFormatFlags.VerticalCenter | TextFormatFlags.WordEllipsis);
+                  
                 }
             }
             else
@@ -778,6 +783,29 @@ namespace MetroFramework.Controls
                 e.Graphics.DrawString(e.Header.Text, stdFont, new SolidBrush(_headColor), e.Bounds, sf);
             }
         }
+
+        // Forces each row to repaint itself the first time the mouse moves over 
+        // it, compensating for an extra DrawItem event sent by the wrapped 
+        // Win32 control. This issue occurs each time the ListView is invalidated.
+         void MetroListView_MouseMove(object sender, MouseEventArgs e)
+        {
+            ListViewItem item = this.GetItemAt(e.X, e.Y);
+            if (item != null && item.Tag == null)
+            {
+                this.Invalidate(item.Bounds);
+                item.Tag = "tagged";
+            }
+        }
+
+        // Resets the item tags. 
+        void MetroListView_Invalidated(object sender, InvalidateEventArgs e)
+        {
+            foreach (ListViewItem item in this.Items)
+            {
+                if (item == null) return;
+                item.Tag = null;
+            }
+        }
     }
 }
 
@@ -820,7 +848,7 @@ public class ListViewColumnSorter : IComparer
     private CaseInsensitiveComparer ObjectCompare;
 
     private SortModifiers mySortModifier = SortModifiers.SortByText;
-    public SortModifiers _SortModifier
+    public SortModifiers SortModifier
     {
         set
         {
